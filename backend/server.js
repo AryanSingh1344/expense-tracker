@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import userRouter from './routes/userRoute.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -22,6 +23,8 @@ const connectDB = async () => {
 };
 
 connectDB();
+
+app.use('/api/user', userRouter);
 
 app.get('/', (req, res) => {
     res.send("API Working");
