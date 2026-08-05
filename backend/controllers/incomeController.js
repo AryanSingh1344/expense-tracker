@@ -1,4 +1,5 @@
 import incomeModel from '../models/incomeModel.js';
+import excel from 'exceljs';
 
 export const addIncome = async (req, res) => {
     try {
@@ -36,6 +37,45 @@ export const deleteIncome = async (req, res) => {
         if (!income) return res.status(404).json({ success: false, message: "Income not found" });
         res.json({ success: true, message: "Income deleted successfully" });
     } catch (error) {
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+
+export const downloadIncomeExcel = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const incomes = await incomeModel.find({ user: userId }).sort({ date: -1 });
+
+        const workbook = new excel.Workbook();
+        const worksheet = workbook.addWorksheet('Incomes');
+        
+        // Define Excel Columns
+        worksheet.columns = [
+            { header: 'Date', key: 'date', width: 15 },
+            { header: 'Description', key: 'description', width: 30 },
+            { header: 'Category', key: 'category', width: 20 },
+            { header: 'Amount', key: 'amount', width: 15 }
+        ];
+
+        // Add Data Rows
+        incomes.forEach(inc => {
+            worksheet.addRow({
+                date: inc.date.toLocaleDateString(),
+                description: inc.description,
+                category: inc.category,
+                amount: inc.amount
+            });
+        });
+
+        // Set Headers for Download
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=income_details.xlsx');
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
