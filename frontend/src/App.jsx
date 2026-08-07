@@ -1,28 +1,54 @@
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState } from 'react'; 
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'; 
 import Layout from './components/Layout';
-import { formatRupee } from './utils/formatters';
+import Login from './components/Login';
+import Signup from './components/Signup';
 
-// Temporary component to test the layout
-const DashboardPlaceholder = () => (
-  <div>
-    Dashboard Active: {formatRupee(0)}
-  </div>
-);
+// 1. ADD THIS IMPORT (Make sure the path matches where your file is!)
+import ProtectedRoute from './components/ProtectedRoute'; 
 
-function App() {
+const API_URL = "http://localhost:4000";
+
+const App = () => {
+  // 2. YOU MUST DEFINE THESE VARIABLES BEFORE USING THEM IN THE RETURN BLOCK
+  const [user, setUser] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+
+  // Placeholder functions so your Layout doesn't crash
+  const handleLogout = () => setUser(null);
+  const addTransaction = (data) => console.log("Add", data);
+  const editTransaction = (data) => console.log("Edit", data);
+  const deleteTransaction = (id) => console.log("Delete", id);
+  const refreshTransactions = () => console.log("Refresh");
+
   return (
-    <Routes>
-      {/* The Layout component wraps all the nested routes */}
-      <Route path="/" element={<Layout />}>
-        {/* The "index" route renders when the path is exactly "/" */}
-        <Route index element={<DashboardPlaceholder />} />
-        
-        <Route path="income" element={<div>Income Page coming soon</div>} />
-        <Route path="expense" element={<div>Expense Page coming soon</div>} />
-        <Route path="profile" element={<div>Profile Page coming soon</div>} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        {/* Public Routes */}
+        <Route path='/login' element={<Login  />} />
+        <Route path='/signup' element={<Signup  />} />
+
+        {/* Protected Dashboard/Layout Wrapper */}
+        {/* Note: I added path="/" here so this actually renders on your homepage */}
+        <Route path="/" element={
+          <ProtectedRoute user={user}>
+            <Layout
+              user={user}
+              onLogout={handleLogout}
+              transactions={transactions}
+              addTransaction={addTransaction}
+              editTransaction={editTransaction}
+              deleteTransaction={deleteTransaction}
+              refreshTransactions={refreshTransactions} 
+            />
+          </ProtectedRoute>
+        } />
+
+        {/* Wildcard Fallback */}
+        <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+      </Routes>
+    </>
   );
-}
+};
 
 export default App;

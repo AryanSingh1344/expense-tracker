@@ -1,31 +1,143 @@
-const Navbar = () => {
-  return (
-    <nav style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #ccc' }}>
-      <h2>Overview</h2>
-      
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
-          <strong>User Name</strong>
-          <small>user@example.com</small>
-        </div>
+import React, { useState, useRef, useEffect } from 'react';
+import { navbarStyles } from '../assets/dummyStyles';
+import img1 from '../assets/logo.png';
+import { ChevronDown, User, LogOut } from 'lucide-react'; 
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const BaseURL = 'http://localhost:4000/api';
+
+function Navbar({ user: propUser, onLogout }) {
+  const navigate = useNavigate();
+  const menuRef = useRef();
+  const [menuOpen, setMenuOpen] = useState(false);
+  
+  const [localUser, setLocalUser] = useState(null);
+
+  const user = propUser || localUser || {
+    name: "",
+    email: "",
+  };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const response = await axios.get(`${BaseURL}/user/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const userData = response.data.user || response.data;
         
-        {/* Avatar Circle */}
-        <div style={{
-          width: '40px', 
-          height: '40px', 
-          borderRadius: '50%', 
-          backgroundColor: '#007bff', 
-          color: 'white', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          fontWeight: 'bold'
-        }}>
-          U
+        setLocalUser(userData); 
+      } catch (error) {
+        console.error("Failed to load Profile", error);
+      }
+    };
+
+    if (!propUser) {
+      fetchUserData();
+    }
+  }, [propUser]);
+
+  const toggleMenu = () => {
+    setMenuOpen((prev) => !prev);
+  };
+
+  const handleLogout = () => {
+    setMenuOpen(false);
+    localStorage.removeItem("token");
+    onLogout?.();
+    navigate("/login");
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <header className={navbarStyles.header}>
+      <div className={navbarStyles.container}>
+        {/* Logo Section */}
+        <div onClick={() => navigate('/')} className={navbarStyles.logoContainer}>
+          <div className={navbarStyles.logoImage}>
+            <img src={img1} alt="Logo" />
+          </div>
+          <span className={navbarStyles.logoText}>Expense Tracker</span>
         </div>
+
+        {/* User is Present */}
+        {user.name && ( 
+          <div className={navbarStyles.userContainer} ref={menuRef}>
+            <button onClick={toggleMenu} className={navbarStyles.userButton}>
+              <div className='relative'>
+                <div className={navbarStyles.userAvatar}>
+                  {user?.name?.[0]?.toUpperCase() || "U"}
+                </div>
+                <div className={navbarStyles.statusIndicator}></div>
+              </div>
+              <div className={navbarStyles.userTextContainer}>
+                <p className={navbarStyles.userName}>
+                  {user?.name || "User"}
+                </p>
+                <p className={navbarStyles.userEmail}>
+                  {user?.email || "user@example.com"}
+                </p>
+              </div>
+              <ChevronDown className={navbarStyles.chevronIcon(menuOpen)} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {menuOpen && (
+              <div className={navbarStyles.dropdownMenu}>
+                <div className={navbarStyles.dropdownHeader}>
+                  <div className="flex items-center gap-3">
+                    <div className={navbarStyles.dropdownAvatar}>
+                      {user?.name?.[0]?.toUpperCase() || "U"}
+                    </div>
+
+                    <div>
+                      <div className={navbarStyles.dropdownName}>
+                        {user?.name || "User"}
+                      </div>
+                      <div className={navbarStyles.dropdownEmail}>
+                        {user?.email || "user@example.com"}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className={navbarStyles.menuItemContainer}>
+                    <button onClick={() => {
+                      setMenuOpen(false);
+                      navigate("/profile");
+                    }} className={navbarStyles.menuItem}>
+                      <User className="w-4 h-4" />
+                      <span>My Profile</span>
+                    </button>
+                  </div>
+
+                  <div className={navbarStyles.menuItemBorder}>
+                    <button onClick={handleLogout} className={navbarStyles.logoutButton}>
+                      <LogOut className="w-4 h-4" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </nav>
+    </header>
   );
-};
+}
 
 export default Navbar;
