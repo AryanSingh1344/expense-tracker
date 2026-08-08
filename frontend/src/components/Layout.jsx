@@ -1,8 +1,8 @@
-import React, { Activity, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { styles } from '../assets/dummyStyles';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { ActivityIcon, ArrowDown, ArrowUp, Car, ChevronDown, ChevronUp, Clock, CreditCard, Gift, Home, IndianRupee, Info, PieChart, PiggyBank, RefreshCcw, RefreshCw, ShoppingCart, TrendingUp, Utensils, Zap } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUp, Car, ChevronDown, ChevronUp, Clock, CreditCard, Gift, Home, IndianRupee, Info, PieChart, PiggyBank, RefreshCcw, RefreshCw, ShoppingCart, TrendingUp, Utensils, Zap } from 'lucide-react';
 import axios from 'axios';
 import { Outlet } from 'react-router-dom';
 
@@ -14,7 +14,7 @@ const CATEGORY_ICONS = {
   Shopping: <ShoppingCart className="w-4 h-4" />,
   Entertainment: <Gift className="w-4 h-4" />,
   Utilities: <Zap className="w-4 h-4" />,
-  Healthcare: <ActivityIcon className="w-4 h-4" />,
+  Healthcare: <Activity className="w-4 h-4" />,
   Salary: <ArrowUp className="w-4 h-4" />,
   Freelance: <CreditCard className="w-4 h-4" />,
   Savings: <PiggyBank className="w-4 h-4" />,
@@ -285,7 +285,7 @@ function Layout({ onLogout, user }) {
 
   return (
     <div className={styles.layout.root}>
-      <Navbar user={user} onLogout={onLogout} />
+     <Navbar user={user} onLogout={onLogout} />
       <Sidebar
         user={user}
         isCollapsed={sidebarCollapsed}
