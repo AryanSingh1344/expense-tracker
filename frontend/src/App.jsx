@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import Layout from './components/Layout';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import Dashboard from './pages/Dashboard';
 
 const API_URL = "http://localhost:4000";
 
@@ -114,7 +115,7 @@ const App = () => {
             const response = await fetch(`${API_URL}/api/user/me`, {
               headers: { Authorization: `Bearer ${storedToken}` }
             });
-            const profile = await response.json(); 
+            const profile = await response.json(); // Fixed: .json() is needed for native fetch
             persistAuth(profile, storedToken, tokenFromLocal);
           } catch (fetchError) {
             console.warn("Could not fetch user profile with the token:", fetchError);
@@ -189,7 +190,7 @@ const App = () => {
         <Route path='/signup' element={<Signup onSignup={handleSignup} />} />
 
         {/* Protected Dashboard/Layout Wrapper */}
-        <Route path="/" element={
+        <Route element={
           <ProtectedRoute user={user}>
             <Layout
               user={user}
@@ -201,7 +202,17 @@ const App = () => {
               refreshTransactions={refreshTransactions} 
             />
           </ProtectedRoute>
-        } />
+        }>
+          <Route
+            path="/"
+            element={<Dashboard />}
+            transactions={transactions}
+            addTransaction={addTransaction}
+            editTransaction={editTransaction}
+            deleteTransaction={deleteTransaction}
+            refreshTransactions={refreshTransactions}
+          />
+        </Route>
 
         {/* Wildcard Fallback */}
         <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
