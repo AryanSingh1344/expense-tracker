@@ -7,9 +7,11 @@ import {
   Wallet, PieChart as PieChartIcon, TrendingUp
 } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
+import { getTimeFrameRange, getPreviousTimeFrameRange, calculateData } from '../components/Helpers';
 import axios from 'axios';
 import FinancialCard from '../components/FinancialCard';
 import { Cell, Legend, Pie, ResponsiveContainer, Tooltip, PieChart } from 'recharts';
+
 
 const API_BASE = "http://localhost:4000/api";
 
@@ -62,6 +64,9 @@ function Dashboard() {
     category: "Food",
   });
 
+  const timeFrameRange = useMemo(() => getTimeFrameRange(timeFrame), [timeFrame]);
+  const prevTimeFrameRange = useMemo(() => getPreviousTimeFrameRange(timeFrame), [timeFrame]);
+
   const isDateInRange = (date, start, end) => {
     const transactionDate = new Date(date);
     const startDate = new Date(start);
@@ -73,41 +78,47 @@ function Dashboard() {
     return transactionDate >= startDate && transactionDate <= endDate;
   };
 
-  const filteredTransactions = outletTransactions;
+  // to filter using date and time 
+  const filteredTransactions = useMemo(
+    () => (outletTransactions || []).filter((t) =>
+      isDateInRange(t.date, timeFrameRange.start, timeFrameRange.end)
+    ),
+    [outletTransactions, timeFrameRange]
+  );
+
+  // calculate data
+  const prevFilteredTransactions = useMemo(
+    () => (outletTransactions || []).filter((t) =>
+      isDateInRange(t.date, prevTimeFrameRange.start, prevTimeFrameRange.end)
+    ),
+    [outletTransactions, prevTimeFrameRange]
+  );
 
   const currentTimeFrameData = useMemo(() => {
-    const income = filteredTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const expenses = filteredTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    return { income, expenses, savings: income - expenses };
+    const data = calculateData(filteredTransactions);
+    data.savings = data.income - data.expenses;
+    return data;
   }, [filteredTransactions]);
 
-  const prevTimeFrameData = { expenses: 0, income: 0, savings: 0 }; 
+  const prevTimeFrameData = useMemo(() => {
+    const data = calculateData(prevFilteredTransactions);
+    data.savings = data.income - data.expenses;
+    return data;
+  }, [prevFilteredTransactions]);
 
-  const timeFrameRange = {
-    label: timeFrame === "daily" ? "Today's" : timeFrame === "weekly" ? "This Week's" : "This Month's"
-  };
-  
-  const prevTimeFrameRange = {
-    label: timeFrame === "daily" ? "yesterday" : timeFrame === "weekly" ? "last week" : "last month"
-  };
-
+  // update the gauge when time frame changes
   useEffect(() => {
-    if (timeFrame !== "monthly") {
-      const maxValues = {
-        income: Math.max(currentTimeFrameData.income, 5000),
-        expenses: Math.max(currentTimeFrameData.expenses, 3000),
-        savings: Math.max(Math.abs(currentTimeFrameData.savings), 2000),
-      };
-      setGaugeData([
-        { name: "Income", value: currentTimeFrameData.income, max: maxValues.income },
-        { name: "Spent", value: currentTimeFrameData.expenses, max: maxValues.expenses },
-        { name: "Savings", value: currentTimeFrameData.savings, max: maxValues.savings },
-      ]);
-    }
+    const maxValues = {
+      income: Math.max(currentTimeFrameData.income, 5000),
+      expenses: Math.max(currentTimeFrameData.expenses, 3000),
+      savings: Math.max(Math.abs(currentTimeFrameData.savings), 2000),
+    };
+
+    setGaugeData([
+      { name: "Income", value: currentTimeFrameData.income, max: maxValues.income },
+      { name: "Spent", value: currentTimeFrameData.expenses, max: maxValues.expenses },
+      { name: "Savings", value: currentTimeFrameData.savings, max: maxValues.savings },
+    ]);
   }, [currentTimeFrameData, timeFrame]);
 
   const displayIncome =
@@ -199,7 +210,7 @@ function Dashboard() {
 
   const displayedIncome = showAllIncome
     ? incomeListForDisplay
-    : incomeListForDisplay.slice(0, 3);
+    : incomeListForDisplay.slice(0, 3); // show 3 then a toggle button to show more
 
   const displayedExpense = showAllExpense
     ? expenseListForDisplay
@@ -412,7 +423,7 @@ function Dashboard() {
             <PiggyBank className=" w-5 h-5 text-cyan-600" />
           </div>
         } label={`${timeFrameRange.label} Savings`} 
-        value={`₹${Math.round(displaySavings).toLocaleString()}`}
+        value={`${Math.round(displaySavings).toLocaleString()}`}
           additionalContent={
             <div className=" mt-2 text-xs flex items-center gap-2 text-cyan-600">
                 <div className=" flex items-center gap-1">
@@ -430,17 +441,6 @@ function Dashboard() {
             </div>
           }
         />
-      </div>
-
-      {/* Gauges Placeholder */}
-      <div className={dashboardStyles.gaugeGrid}>
-        {gaugeData.map((gauge) => (
-          <div key={gauge.name} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-             <span className="text-gray-500 font-medium mb-2">{gauge.name}</span>
-             <span className="text-2xl font-bold text-gray-800">₹{Math.round(gauge.value).toLocaleString()}</span>
-             <span className="text-xs text-gray-400 mt-1">Max target: ₹{Math.round(gauge.max).toLocaleString()}</span>
-          </div>
-        ))}
       </div>
 
       {/* Expense distribution pie */}
@@ -593,6 +593,7 @@ function Dashboard() {
                     </div>
                   </div>
                   <div className={dashboardStyles.transactionAmount}>
+                    {/* 👇 HERE IS THE FIX: -$ changed to -₹ */}
                     <p className={dashboardStyles.expenseAmount}>-₹{Math.abs(transaction.amount).toLocaleString()}</p>
                     <p className={dashboardStyles.transactionDate}>{new Date(transaction.date).toLocaleDateString()}</p>
                   </div>
@@ -632,24 +633,6 @@ function Dashboard() {
           </div>
         </div>
       </div>
-
-      {/* Simple Inline Placeholder Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full text-center">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Add Transaction</h2>
-            <p className="text-gray-500 mb-6 text-sm">
-              The AddTransactionModal component is not built yet.
-            </p>
-            <button 
-              onClick={() => setShowModal(false)}
-              className="w-full py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
