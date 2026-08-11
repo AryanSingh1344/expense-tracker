@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'; 
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'; 
 import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
 import Login from './components/Login';
 import Signup from './components/Signup';
-import Dashboard from './pages/Dashboard';
+import Income from './pages/Income';
 
 const API_URL = "http://localhost:4000";
 
@@ -212,6 +213,16 @@ const App = () => {
             deleteTransaction={deleteTransaction}
             refreshTransactions={refreshTransactions}
           />
+
+          <Route path='/income' element={
+            <Income 
+              transactions={transactions}
+              addTransaction={addTransaction}
+              editTransaction={editTransaction}
+              deleteTransaction={deleteTransaction}
+              refreshTransactions={refreshTransactions}
+            />
+          } />
         </Route>
 
         {/* Wildcard Fallback */}

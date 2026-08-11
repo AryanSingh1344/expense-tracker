@@ -1,81 +1,175 @@
-import incomeModel from '../models/incomeModel.js';
-import excel from 'exceljs';
+import incomeModel from "../models/incomeModel.js";
+import XLSX from "xlsx";
+import getDateRange from "../utils/dateFilter.js";
 
+//add income
 export const addIncome = async (req, res) => {
+    const userId = req.user._id;
+    const { description, amount, category, date } = req.body;
+
     try {
-        const userId = req.user.id;
-        const { description, amount, category, date } = req.body;
-        
         if (!description || !amount || !category || !date) {
-            return res.status(400).json({ success: false, message: "All fields are required" });
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required"
+            });
         }
 
-        const newIncome = new incomeModel({ user: userId, description, amount, category, date: new Date(date) });
-        await newIncome.save();
-        
-        res.json({ success: true, message: "Income added successfully" });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-};
-
-export const getAllIncome = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const income = await incomeModel.find({ user: userId }).sort({ date: -1 });
-        res.json({ success: true, data: income });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-};
-
-export const deleteIncome = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const income = await incomeModel.findByIdAndDelete(id);
-        if (!income) return res.status(404).json({ success: false, message: "Income not found" });
-        res.json({ success: true, message: "Income deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-};
-
-
-export const downloadIncomeExcel = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const incomes = await incomeModel.find({ user: userId }).sort({ date: -1 });
-
-        const workbook = new excel.Workbook();
-        const worksheet = workbook.addWorksheet('Incomes');
-        
-        // Define Excel Columns
-        worksheet.columns = [
-            { header: 'Date', key: 'date', width: 15 },
-            { header: 'Description', key: 'description', width: 30 },
-            { header: 'Category', key: 'category', width: 20 },
-            { header: 'Amount', key: 'amount', width: 15 }
-        ];
-
-        // Add Data Rows
-        incomes.forEach(inc => {
-            worksheet.addRow({
-                date: inc.date.toLocaleDateString(),
-                description: inc.description,
-                category: inc.category,
-                amount: inc.amount
-            });
+        const newIncome = new incomeModel({
+            userId,
+            description,
+            amount,
+            category,
+            date: new Date(date)
         });
-
-        // Set Headers for Download
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=income_details.xlsx');
-
-        await workbook.xlsx.write(res);
-        res.end();
+        await newIncome.save();
+        res.json({
+            success: true,
+            message: "Income added successfully"
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error" });
+        console.error("Error adding income:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while adding income"
+        });
+    }
+};
+
+//get all income
+export async function getAllIncome(req, res) {
+    const userId = req.user._id;
+    try {
+        const income = await incomeModel.find({ userId }).sort({ date: -1 });
+        res.json(income);
+    }
+    catch (error) {
+        console.error("Error fetching income:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while fetching income"
+        });
+    }
+};
+
+//update income
+export async function updateIncome(req, res) {
+    const { id } = req.params;
+    const userId = req.user._id;
+    const { description, amount } = req.body;
+
+    try {
+        const updatedIncome = await incomeModel.findOneAndUpdate(
+            { _id: id, userId },
+            { description, amount },
+            { new: true }
+        );
+        if (!updatedIncome) {
+            res.status(404).json({
+                success: false,
+                message: "Income not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Income updated successfully",
+            date: updatedIncome
+        });
+    } catch (error) {
+        console.error("Error updating income:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while updating income"
+        });
+    }
+
+};
+
+//delete income
+export async function deleteIncome(req, res) {
+    try {
+        const income = await incomeModel.findByIdAndDelete({ _id: req.params.id });
+        if (!income) {
+            return res.status(404).json({
+                success: false,
+                message: "Income not found"
+            });
+        }
+        res.json({
+            success: true,
+            message: "Income deleted successfully"
+        });
+    }
+    catch (error) {
+        console.error("Error deleting income:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while deleting income"
+        });
+    }
+};
+
+//download income data in excel sheet
+
+export async function downloadIncomeExcel(req, res) {
+    const userId = req.user._id;
+    try {
+        const income = await incomeModel.find({ userId }).sort({ date: -1 });
+        const plainData = income.map(income => ({
+            description: income.description,
+            amount: income.amount,
+            category: income.category,
+            Date: new Date(income.date).toLocaleDateString(),
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(plainData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "IncomeModel");
+        XLSX.writeFile(workbook, "income_data.xlsx");
+        res.download("income_data.xlsx");
+    } catch (error) {
+        console.error("Error downloading income data:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while downloading income data"
+        });
+    }
+};
+
+//get income overview
+export async function getIncomeOverview(req, res) {
+    try {
+        const userId = req.user._id;
+        const { range = "monthly" } = req.query;
+        const { start, end } = getDateRange(range);
+
+        const incomes = await incomeModel.find({
+            userId,
+            date: { $gte: start, $lte: end }
+        }).sort({ date: -1 });
+
+
+        const totalIncome = incomes.reduce((acc, cur) => acc + cur.amount, 0);
+        const averageIncome = incomes.length > 0 ? totalIncome / incomes.length : 0;
+        const numberOfTransactions = incomes.length;
+        const recentTransactions = incomes.slice(0, 9);
+
+        res.json({
+            success: true,
+            data: {
+                totalIncome,    
+                averageIncome,
+                numberOfTransactions,
+                recentTransactions,
+                range
+            }
+        });
+    }
+    catch (error) {
+        console.error("Error fetching income overview:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server error while fetching income overview"
+        });
     }
 };

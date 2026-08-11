@@ -10,8 +10,9 @@ import { useOutletContext } from 'react-router-dom';
 import { getTimeFrameRange, getPreviousTimeFrameRange, calculateData } from '../components/Helpers';
 import axios from 'axios';
 import FinancialCard from '../components/FinancialCard';
+import GaugeCard from '../components/GaugeCard';
 import { Cell, Legend, Pie, ResponsiveContainer, Tooltip, PieChart } from 'recharts';
-
+import AddTransactionModal from '../components/Add';
 
 const API_BASE = "http://localhost:4000/api";
 
@@ -443,6 +444,14 @@ function Dashboard() {
         />
       </div>
 
+      {/* Gauges */}
+      <div className={dashboardStyles.gaugeGrid}>
+        {gaugeData.map((gauge) => (
+          <GaugeCard key={gauge.name} gauge={gauge} colorInfo={GAUGE_COLORS[gauge.name]} 
+          timeFrameLabel={timeFrameRange.label} />
+        ))}
+      </div>
+
       {/* Expense distribution pie */}
       <div className={dashboardStyles.pieChartContainer}>
         <div className={dashboardStyles.pieChartHeader}>
@@ -633,6 +642,10 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      <AddTransactionModal showModal={showModal} setShowModal={setShowModal}
+      newTransaction={newTransaction} setNewTransaction={setNewTransaction} 
+      handleAddTransaction={handleAddTransaction} loading={loading} />
     </div>
   );
 };

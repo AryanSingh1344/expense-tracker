@@ -1,37 +1,62 @@
-import incomeModel from '../models/incomeModel.js';
-import expenseModel from '../models/expenseModel.js';
+import incomeModel from "../models/incomeModel.js";
 
-export const getDashboardOverview = async (req, res) => {
+import expenseModel from "../models/expenseModel.js";
+
+export async function getDashboardOverview(req, res) {
+    const userId = req.user._id;
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
     try {
-        const userId = req.user.id;
-        
-        // Fetch all transactions for the logged-in user
-        const incomes = await incomeModel.find({ user: userId }).lean();
-        const expenses = await expenseModel.find({ user: userId }).lean();
+        const incomes = await incomeModel.find({
+            userId,
+            date: { $gte: startOfMonth, $lte: now },
+        }).lean();
+        const expenses = await expenseModel.find({
+            userId,
+            date: { $gte: startOfMonth, $lte: now },
+        }).lean();
 
-        // Calculate totals
-        const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
-        const totalExpense = expenses.reduce((sum, item) => sum + item.amount, 0);
-        const totalBalance = totalIncome - totalExpense;
-        const savingRate = totalIncome > 0 ? ((totalBalance / totalIncome) * 100).toFixed(2) : 0;
+        const monthlyIncome = incomes.reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
+        const monthlyExpense = expenses.reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
+        const savings = monthlyIncome - monthlyExpense;
+        const savingsRate = monthlyIncome === 0 ? 0 : Math.round((savings / monthlyIncome) * 100);
 
-        // Merge and sort for recent transactions
-        const recentTransactions = [...incomes, ...expenses]
-            .sort((a, b) => b.date - a.date)
-            .slice(0, 5); // Get the top 5 most recent
+        const recentTransactions = [
+            ...incomes.map((i) => ({ ...i, type: "income" })),
+            ...expenses.map((e) => ({ ...e, type: "expense" })),
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        res.status(200).json({
+        const spendByCategory = {};
+        for (const exp of expenses) {
+            const cat = exp.category || "Other";
+            spendByCategory[cat] = (spendByCategory[cat] || 0) + Number(exp.amount || 0);
+        }
+
+        const expenseDistribution = Object.entries(spendByCategory).map(([category, amount]) => ({
+            category,
+            amount,
+            percent: monthlyExpense === 0 ? 0 : Math.round((amount / monthlyExpense) * 100),
+        }));// for chart
+
+        return res.status(200).json({
             success: true,
             data: {
-                totalIncome,
-                totalExpense,
-                totalBalance,
-                savingRate,
-                recentTransactions
-            }
+                monthlyIncome,
+                monthlyExpense,
+                savings,
+                savingsRate,
+                recentTransactions,
+                spendByCategory,
+                expenseDistribution,
+            },
         });
-    } catch (error) {
-        console.error("Dashboard Fetch Error: ", error);
-        res.status(500).json({ success: false, message: "Dashboard fetch failed" });
     }
-};
+    catch (error) {
+        console.error("Error fetching dashboard overview:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Dashboard overview fetch failed"
+        });
+    }
+}
