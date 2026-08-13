@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import Income from './pages/Income';
+import Expense from './pages/Expense';
 
 const API_URL = "http://localhost:4000";
 
@@ -76,19 +77,6 @@ const App = () => {
     setToken(null);
   };
 
-  // To update user data both in state and storage
-  const updateUserData = (updatedUser) => {
-    setUser(updatedUser);
-    const localToken = localStorage.getItem("token");
-    const sessionToken = sessionStorage.getItem("token");
-
-    if (localToken) {
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-    } else if (sessionToken) {
-      sessionStorage.setItem("user", JSON.stringify(updatedUser));
-    }
-  };
-
   // Try to load user with token when mounted
   useEffect(() => {
     (async () => {
@@ -145,7 +133,7 @@ const App = () => {
   }, [transactions]);
 
   const handlelogin = (userData, remember = false, tokenFromApi = null) => {
-    persistAuth(userData, tokenFromApi, remember); 
+    persistAuth(userData, tokenFromApi, remember); // Fixed typo here (persisAuth -> persistAuth)
     navigate("/");
   };
 
@@ -216,6 +204,16 @@ const App = () => {
 
           <Route path='/income' element={
             <Income 
+              transactions={transactions}
+              addTransaction={addTransaction}
+              editTransaction={editTransaction}
+              deleteTransaction={deleteTransaction}
+              refreshTransactions={refreshTransactions}
+            />
+          } />
+
+          <Route path='/expense' element={
+            <Expense 
               transactions={transactions}
               addTransaction={addTransaction}
               editTransaction={editTransaction}
