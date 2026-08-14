@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import Income from './pages/Income';
 import Expense from './pages/Expense';
+import Profile from './pages/Profile'; 
 
 const API_URL = "http://localhost:4000";
 
@@ -75,6 +76,19 @@ const App = () => {
     }
     setUser(null);
     setToken(null);
+  };
+
+  // To update user data both in state and storage
+  const updateUserData = (updatedUser) => {
+    setUser(updatedUser);
+    const localToken = localStorage.getItem("token");
+    const sessionToken = sessionStorage.getItem("token");
+
+    if (localToken) {
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } else if (sessionToken) {
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+    }
   };
 
   // Try to load user with token when mounted
@@ -219,6 +233,14 @@ const App = () => {
               editTransaction={editTransaction}
               deleteTransaction={deleteTransaction}
               refreshTransactions={refreshTransactions}
+            />
+          } />
+
+          <Route path="/profile" element={
+            <Profile
+              user={user}
+              onUpdateProfile={updateUserData}
+              onLogout={handleLogout}
             />
           } />
         </Route>
