@@ -8,7 +8,7 @@ import Income from './pages/Income';
 import Expense from './pages/Expense';
 import Profile from './pages/Profile'; 
 
-const API_URL = "http://localhost:4000";
+const API_URL = "https://expense-tracker-backend-ro7e.onrender.com";
 
 // To get transaction data from backend and display on dashboard
 const getTransactionsFromStorage = () => {
