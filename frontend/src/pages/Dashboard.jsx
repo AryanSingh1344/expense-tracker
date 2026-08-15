@@ -602,7 +602,6 @@ function Dashboard() {
                     </div>
                   </div>
                   <div className={dashboardStyles.transactionAmount}>
-                    {/* 👇 HERE IS THE FIX: -$ changed to -₹ */}
                     <p className={dashboardStyles.expenseAmount}>-₹{Math.abs(transaction.amount).toLocaleString()}</p>
                     <p className={dashboardStyles.transactionDate}>{new Date(transaction.date).toLocaleDateString()}</p>
                   </div>

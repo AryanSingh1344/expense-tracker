@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { styles } from '../assets/dummyStyles';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { Activity, ArrowDown, ArrowUp, Car, ChevronDown, ChevronUp, Clock, CreditCard, Gift, Home, IndianRupee, Info, PieChart, PiggyBank, RefreshCcw, RefreshCw, ShoppingCart, TrendingUp, Utensils, Zap } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUp, Car, ChevronDown, ChevronUp, Clock, CreditCard, Gift, Home, IndianRupee, Info, PieChart, PiggyBank, RefreshCw, ShoppingCart, TrendingUp, Utensils, Zap } from 'lucide-react';
 import axios from 'axios';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 
 const API_BASE = "http://localhost:4000/api";
 const CATEGORY_ICONS = {
@@ -53,6 +53,7 @@ const safeArrayFromResponse = (res) => {
 };
 
 function Layout({ onLogout, user }) {
+  const location = useLocation(); 
   const [transactions, setTransactions] = useState([]);
   const [timeFrame, setTimeFrame] = useState("monthly");
   const [loading, setLoading] = useState(false);
@@ -60,26 +61,34 @@ function Layout({ onLogout, user }) {
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  //to fetch the transaction from the server side 
+  // Smart fetch function with auto-discovery fallbacks
   const fetchTransactions = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const [incomeRes, expenseRes] = await Promise.all([
-        axios.get(`${API_BASE}/income/all`, { headers }),
-        axios.get(`${API_BASE}/expense/all`, { headers }),
-      ]);
+      // Helper to try multiple endpoint routes to bypass 404s
+      const fetchWithFallback = async (type) => {
+        const endpoints = ['/get', '/all', '/', '/get-all'];
+        for (const ep of endpoints) {
+          try {
+            const res = await axios.get(`${API_BASE}/${type}${ep}`, { headers });
+            return safeArrayFromResponse(res).map(item => ({ ...item, type }));
+          } catch (err) {
+            if (err.response?.status === 404) {
+              continue; // Try the next endpoint
+            }
+            console.error(`Error fetching ${type} at ${ep}:`, err);
+          }
+        }
+        console.warn(`Could not find a valid route for ${type}.`);
+        return [];
+      };
 
-      const incomes = safeArrayFromResponse(incomeRes).map((i) => ({
-        ...i,
-        type: "income",
-      }));
-      const expenses = safeArrayFromResponse(expenseRes).map((e) => ({
-        ...e,
-        type: "expense",
-      }));
+      // Fetch independently to prevent Promise.all from crashing the whole app
+      const incomes = await fetchWithFallback('income');
+      const expenses = await fetchWithFallback('expense');
 
       const allTransactions = [...incomes, ...expenses]
         .map((t) => ({
@@ -96,10 +105,7 @@ function Layout({ onLogout, user }) {
       setTransactions(allTransactions);
       setLastUpdated(new Date());
     } catch (err) {
-      console.error(
-        "Failed to fetch transactions",
-        err?.response || err.message || err
-      );
+      console.error("Critical error in fetchTransactions", err);
     } finally {
       setLoading(false);
     }
@@ -170,7 +176,7 @@ function Layout({ onLogout, user }) {
   const filteredTransactions = useMemo(
     () => filterTransactions(transactions, timeFrame),
     [transactions, timeFrame]
-  );//filter with timeframe
+  );
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -216,6 +222,10 @@ function Layout({ onLogout, user }) {
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
+    const previous30DaysIncome = previous30DaysTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
     const expenseChange =
       previous30DaysExpenses > 0
         ? Math.round(
@@ -223,6 +233,15 @@ function Layout({ onLogout, user }) {
             previous30DaysExpenses) *
           100
         )
+        : 0;
+
+    const incomeChange =
+      previous30DaysIncome > 0
+        ? Math.round(
+            ((last30DaysIncome - previous30DaysIncome) /
+              previous30DaysIncome) *
+              100
+          )
         : 0;
 
     return {
@@ -236,6 +255,7 @@ function Layout({ onLogout, user }) {
       last30DaysCount: last30DaysTransactions.length,
       savingsRate,
       expenseChange,
+      incomeChange,
     };
   }, [transactions]);
 
@@ -245,7 +265,9 @@ function Layout({ onLogout, user }) {
         ? "Today"
         : timeFrame === "weekly"
           ? "This Week"
-          : "This Month",
+          : timeFrame === "yearly"
+            ? "This Year"
+            : "This Month",
     [timeFrame]
   );
 
@@ -263,7 +285,6 @@ function Layout({ onLogout, user }) {
   const getSavingsRating = (rate) =>
     rate > 30 ? "Excellent" : rate > 20 ? "Good" : "Needs improvement";
 
-  //for filter using category
   const topCategories = useMemo(
     () =>
       Object.entries(
@@ -307,7 +328,7 @@ function Layout({ onLogout, user }) {
                 <p className={styles.statCards.cardTitle}>Total Balance</p>
                 <p className={styles.statCards.cardValue}>
                   ₹
-                  {stats.allTimeSavings.toLocaleString("en-US", {
+                  {stats.allTimeSavings.toLocaleString("en-IN", {
                     maximumFractionDigits: 2,
                   })}
                 </p>
@@ -318,20 +339,19 @@ function Layout({ onLogout, user }) {
             </div>
             <p className={styles.statCards.cardFooter}>
               <span className="text-teal-600 font-medium">
-                +₹{stats.last30DaysSavings.toLocaleString()}
+                +₹{stats.last30DaysSavings.toLocaleString("en-IN")}
               </span>{" "}
               this month
             </p>
           </div>
 
-          {/* for income*/}
           <div className={styles.statCards.card}>
             <div className={styles.statCards.cardHeader}>
               <div>
                 <p className={styles.statCards.cardTitle}>Monthly Income</p>
                 <p className={styles.statCards.cardValue}>
                   ₹
-                  {stats.last30DaysIncome.toLocaleString("en-US", {
+                  {stats.last30DaysIncome.toLocaleString("en-IN", {
                     maximumFractionDigits: 2,
                   })}
                 </p>
@@ -341,21 +361,21 @@ function Layout({ onLogout, user }) {
               </div>
             </div>
             <p className={styles.statCards.cardFooter}>
-              <span className="text-green-600 font-medium">
-                +12.5%
+              <span className={`${stats.incomeChange >= 0 ? 'text-green-600' : 'text-red-600'} font-medium`}>
+                {stats.incomeChange > 0 ? "+" : ""}
+                {stats.incomeChange}%
               </span>{" "}
               from last month
             </p>
           </div>
 
-          {/* monthly Expense*/}
           <div className={styles.statCards.card}>
             <div className={styles.statCards.cardHeader}>
               <div>
                 <p className={styles.statCards.cardTitle}>Monthly Expense</p>
                 <p className={styles.statCards.cardValue}>
                   ₹
-                  {stats.last30DaysExpenses.toLocaleString("en-US", {
+                  {stats.last30DaysExpenses.toLocaleString("en-IN", {
                     maximumFractionDigits: 2,
                   })}
                 </p>
@@ -375,7 +395,6 @@ function Layout({ onLogout, user }) {
             </p>
           </div>
 
-          {/*Saving Rate*/}
           <div className={styles.statCards.card}>
             <div className={styles.statCards.cardHeader}>
               <div>
@@ -400,17 +419,21 @@ function Layout({ onLogout, user }) {
               <div className={styles.cards.header}>
                 <h3 className={styles.cards.title}>
                   <TrendingUp className=" w-6 h-6 text-teal-500" />
-                  Financial Overview
-                  <span className="text-sm text-gray-500 font-normal">
-                    ({timeFrameLabel})
-                  </span>
+                  {location.pathname === '/profile' ? (
+                    "Profile Overview"
+                  ) : (
+                    <>
+                      Financial Overview
+                      <span className="text-sm text-gray-500 font-normal ml-1">
+                        ({timeFrameLabel})
+                      </span>
+                    </>
+                  )}
                 </h3>
               </div>
               <Outlet context={outletContext} />
             </div>
           </div>
-
-          {/* right side*/}
 
           <div className={styles.grid.rightColumn}>
             <div className={styles.cards.base}>
@@ -438,9 +461,7 @@ function Layout({ onLogout, user }) {
                   return (
                     <div key={id} className={styles.transactions.transactionItem}>
                       <div className="flex items-center gap-1 md:gap-4 lg:gap-3">
-                        <div className={`p-2 rounded-lg ${styles.colors.transaction.bg(type
-
-                        )} `}>
+                        <div className={`p-2 rounded-lg ${styles.colors.transaction.bg(type)} `}>
                           {CATEGORY_ICONS[category] || (
                             <IndianRupee className={styles.transactions.icon} />
                           )}
@@ -460,8 +481,7 @@ function Layout({ onLogout, user }) {
                         </div>
                       </div>
                       <span className={styles.colors.transaction.text(type)}>
-                        {type === "income" ? "+" : "-"}₹{Number(amount)}
-
+                        {type === "income" ? "+" : "-"}₹{Number(amount).toLocaleString('en-IN')}
                       </span>
                     </div>
                   )
@@ -498,7 +518,6 @@ function Layout({ onLogout, user }) {
               </div>
             </div>
 
-            {/* spending by category card*/}
             <div className={styles.cards.base}>
               <h3 className={styles.categories.title}>
                 <PieChart className={styles.categories.titleIcon} />
@@ -520,7 +539,7 @@ function Layout({ onLogout, user }) {
                       </span>
                     </div>
                     <span className={styles.categories.categoryAmount}>
-                      ₹{amount}
+                      ₹{amount.toLocaleString('en-IN')}
                     </span>
                   </div>
                 ))}
@@ -532,7 +551,7 @@ function Layout({ onLogout, user }) {
                       Total Income
                     </p>
                     <p className={styles.categories.summaryValue}>
-                      ₹{stats.allTimeIncome.toLocaleString()}
+                      ₹{stats.allTimeIncome.toLocaleString('en-IN')}
                     </p>
                   </div>
 
@@ -541,7 +560,7 @@ function Layout({ onLogout, user }) {
                       Total Expense
                     </p>
                     <p className={styles.categories.summaryValue}>
-                      ₹{stats.allTimeExpenses.toLocaleString()}
+                      ₹{stats.allTimeExpenses.toLocaleString('en-IN')}
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,5 @@
 import React from 'react';
 import { modalStyles } from '../assets/dummyStyles';
-// 1. Added missing import for the close icon
 import { X } from 'lucide-react'; 
 
 const AddTransactionModal = ({
