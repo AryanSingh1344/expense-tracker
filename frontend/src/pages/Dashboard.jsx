@@ -424,7 +424,7 @@ function Dashboard() {
             <PiggyBank className=" w-5 h-5 text-cyan-600" />
           </div>
         } label={`${timeFrameRange.label} Savings`}
-          value={`${Math.round(displaySavings).toLocaleString()}`}
+          value={`₹${Math.round(displaySavings).toLocaleString()}`}
           additionalContent={
             <div className=" mt-2 text-xs flex items-center gap-2 text-cyan-600">
               <div className=" flex items-center gap-1">
