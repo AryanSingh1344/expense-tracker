@@ -488,7 +488,7 @@ function Dashboard() {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value) => [`₹${Math.round(value).toLocaleString()}`, "Amount"]}
+                formatter={(value, name) => [`₹${Math.round(value).toLocaleString('en-IN')}`, name]}
                 contentStyle={dashboardStyles.tooltipContent}
                 itemStyle={dashboardStyles.tooltipItem}
               />
