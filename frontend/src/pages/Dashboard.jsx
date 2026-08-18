@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { dashboardStyles, trendStyles, chartStyles } from '../assets/dummyStyles';
 import { GAUGE_COLORS, COLORS, INCOME_CATEGORY_ICONS, EXPENSE_CATEGORY_ICONS } from '../assets/color';
-import { 
-  ArrowDown, BarChart2, ChevronDown, ChevronUp, IndianRupee, 
-  PiggyBank, Plus, ShoppingCart, TrendingDown, TrendingUp as ProfitIcon, 
+import {
+  ArrowDown, BarChart2, ChevronDown, ChevronUp, IndianRupee,
+  PiggyBank, Plus, ShoppingCart, TrendingDown, TrendingUp as ProfitIcon,
   Wallet, PieChart as PieChartIcon, TrendingUp
 } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
@@ -54,7 +54,7 @@ function Dashboard() {
   const [gaugeData, setGaugeData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [overviewMeta, setOverviewMeta] = useState({});
-  const [showAllIncome, setShowAllIncome] = useState(false); 
+  const [showAllIncome, setShowAllIncome] = useState(false);
   const [showAllExpense, setShowAllExpense] = useState(false);
 
   const [newTransaction, setNewTransaction] = useState({
@@ -338,7 +338,7 @@ function Dashboard() {
         amount: "",
         type: "expense",
         category: "Food",
-      }); 
+      });
       setShowModal(false);
     } catch (error) {
       console.error("Failed to add transaction:", error?.response || error.message || error);
@@ -423,22 +423,22 @@ function Dashboard() {
           <div className={dashboardStyles.piggyBankIconContainer}>
             <PiggyBank className=" w-5 h-5 text-cyan-600" />
           </div>
-        } label={`${timeFrameRange.label} Savings`} 
-        value={`${Math.round(displaySavings).toLocaleString()}`}
+        } label={`${timeFrameRange.label} Savings`}
+          value={`${Math.round(displaySavings).toLocaleString()}`}
           additionalContent={
             <div className=" mt-2 text-xs flex items-center gap-2 text-cyan-600">
-                <div className=" flex items-center gap-1">
-                  <BarChart2 className=" w-4 h-4" />
-                  <span>
-                    {displayIncome > 0 ? Math.round((displaySavings / displayIncome) * 100) : 0}% of Income
-                  </span>
-                </div>
-                {typeof overviewMeta.savingsRate === "number" && (
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${overviewMeta.savingsRate < 0 ? trendStyles.negativeRate : trendStyles.positiveRate
-                    }`}
-                  > {overviewMeta.savingsRate}%
-                  </span>
-                )}
+              <div className=" flex items-center gap-1">
+                <BarChart2 className=" w-4 h-4" />
+                <span>
+                  {displayIncome > 0 ? Math.round((displaySavings / displayIncome) * 100) : 0}% of Income
+                </span>
+              </div>
+              {typeof overviewMeta.savingsRate === "number" && (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${overviewMeta.savingsRate < 0 ? trendStyles.negativeRate : trendStyles.positiveRate
+                  }`}
+                > {overviewMeta.savingsRate}%
+                </span>
+              )}
             </div>
           }
         />
@@ -447,8 +447,8 @@ function Dashboard() {
       {/* Gauges */}
       <div className={dashboardStyles.gaugeGrid}>
         {gaugeData.map((gauge) => (
-          <GaugeCard key={gauge.name} gauge={gauge} colorInfo={GAUGE_COLORS[gauge.name]} 
-          timeFrameLabel={timeFrameRange.label} />
+          <GaugeCard key={gauge.name} gauge={gauge} colorInfo={GAUGE_COLORS[gauge.name]}
+            timeFrameLabel={timeFrameRange.label} />
         ))}
       </div>
 
@@ -473,8 +473,8 @@ function Dashboard() {
                 outerRadius={110}
                 paddingAngle={2}
                 dataKey="value"
-                label={({ name, percent }) =>
-                  `${name}: ${Math.round(percent * 100)}%`
+                label={({ percent }) =>
+                  percent > 0.05 ? `${Math.round(percent * 100)}%` : ""
                 }
                 labelLine={false}
               >
@@ -554,7 +554,7 @@ function Dashboard() {
 
             {incomeListForDisplay.length > 3 && (
               <div className={dashboardStyles.viewAllContainer}>
-                <button 
+                <button
                   onClick={() => setShowAllIncome(!showAllIncome)}
                   className={dashboardStyles.viewAllButton}
                 >
@@ -620,7 +620,7 @@ function Dashboard() {
 
             {expenseListForDisplay.length > 3 && (
               <div className={dashboardStyles.viewAllContainer}>
-                <button 
+                <button
                   onClick={() => setShowAllExpense(!showAllExpense)}
                   className={dashboardStyles.viewAllButton}
                 >
@@ -643,8 +643,8 @@ function Dashboard() {
       </div>
 
       <AddTransactionModal showModal={showModal} setShowModal={setShowModal}
-      newTransaction={newTransaction} setNewTransaction={setNewTransaction} 
-      handleAddTransaction={handleAddTransaction} loading={loading} />
+        newTransaction={newTransaction} setNewTransaction={setNewTransaction}
+        handleAddTransaction={handleAddTransaction} loading={loading} />
     </div>
   );
 };

@@ -56,7 +56,7 @@ function Layout({ onLogout, user }) {
   const location = useLocation(); 
   const [transactions, setTransactions] = useState([]);
   const [timeFrame, setTimeFrame] = useState("monthly");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
@@ -74,16 +74,16 @@ function Layout({ onLogout, user }) {
             const res = await axios.get(`${API_BASE}/${type}${ep}`, { headers });
             return safeArrayFromResponse(res).map(item => ({ ...item, type }));
           } catch (err) {
-            if (err.response?.status === 404) {
-              continue; 
-            }
+            if (err.response?.status === 404) continue; 
           }
         }
         return [];
       };
 
-      const incomes = await fetchWithFallback('income');
-      const expenses = await fetchWithFallback('expense');
+      const [incomes, expenses] = await Promise.all([
+        fetchWithFallback('income'),
+        fetchWithFallback('expense')
+      ]);
 
       const allTransactions = [...incomes, ...expenses]
         .map((t) => ({
@@ -110,8 +110,7 @@ function Layout({ onLogout, user }) {
     try {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const endpoint =
-        transaction.type === "income" ? "income/add" : "expense/add";
+      const endpoint = transaction.type === "income" ? "income/add" : "expense/add";
       await axios.post(`${API_BASE}/${endpoint}`, transaction, { headers });
       await fetchTransactions();
       return true;
@@ -125,8 +124,7 @@ function Layout({ onLogout, user }) {
     try {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const endpoint =
-        transaction.type === "income" ? "income/update" : "expense/update";
+      const endpoint = transaction.type === "income" ? "income/update" : "expense/update";
       await axios.put(`${API_BASE}/${endpoint}/${id}`, transaction, { headers });
       await fetchTransactions();
       return true;
@@ -308,10 +306,7 @@ function Layout({ onLogout, user }) {
               <div>
                 <p className={styles.statCards.cardTitle}>Total Balance</p>
                 <p className={styles.statCards.cardValue}>
-                  ₹
-                  {stats.allTimeSavings.toLocaleString("en-IN", {
-                    maximumFractionDigits: 2,
-                  })}
+                  {loading && transactions.length === 0 ? "..." : `₹${stats.allTimeSavings.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`}
                 </p>
               </div>
               <div className={styles.statCards.iconContainer("teal")}>
@@ -331,10 +326,7 @@ function Layout({ onLogout, user }) {
               <div>
                 <p className={styles.statCards.cardTitle}>Monthly Income</p>
                 <p className={styles.statCards.cardValue}>
-                  ₹
-                  {stats.last30DaysIncome.toLocaleString("en-IN", {
-                    maximumFractionDigits: 2,
-                  })}
+                  {loading && transactions.length === 0 ? "..." : `₹${stats.last30DaysIncome.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`}
                 </p>
               </div>
               <div className={styles.statCards.iconContainer("green")}>
@@ -355,10 +347,7 @@ function Layout({ onLogout, user }) {
               <div>
                 <p className={styles.statCards.cardTitle}>Monthly Expense</p>
                 <p className={styles.statCards.cardValue}>
-                  ₹
-                  {stats.last30DaysExpenses.toLocaleString("en-IN", {
-                    maximumFractionDigits: 2,
-                  })}
+                  {loading && transactions.length === 0 ? "..." : `₹${stats.last30DaysExpenses.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`}
                 </p>
               </div>
               <div className={styles.statCards.iconContainer("orange")}>
@@ -366,9 +355,7 @@ function Layout({ onLogout, user }) {
               </div>
             </div>
             <p className={styles.statCards.cardFooter}>
-              <span className={`${styles.colors.expenseChange(
-                stats.expenseChange
-              )} font-medium`}>
+              <span className={`${styles.colors.expenseChange(stats.expenseChange)} font-medium`}>
                 {stats.expenseChange > 0 ? "+" : ""}
                 {stats.expenseChange}%
               </span>{" "}
@@ -381,7 +368,7 @@ function Layout({ onLogout, user }) {
               <div>
                 <p className={styles.statCards.cardTitle}>Saving Rate</p>
                 <p className={styles.statCards.cardValue}>
-                  {stats.savingsRate}%
+                  {loading && transactions.length === 0 ? "..." : `${stats.savingsRate}%`}
                 </p>
               </div>
               <div className={styles.statCards.iconContainer("blue")}>
