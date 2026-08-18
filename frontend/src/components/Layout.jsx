@@ -7,6 +7,7 @@ import axios from 'axios';
 import { Outlet, useLocation } from 'react-router-dom';
 
 const API_BASE = "https://expense-tracker-backend-ro7e.onrender.com/api";
+
 const CATEGORY_ICONS = {
   Food: <Utensils className="w-4 h-4" />,
   Housing: <Home className="w-4 h-4" />,
@@ -20,7 +21,6 @@ const CATEGORY_ICONS = {
   Savings: <PiggyBank className="w-4 h-4" />,
 };
 
-// to filter
 const filterTransactions = (transactions, frame) => {
   const now = new Date();
   const today = new Date(now).setHours(0, 0, 0, 0);
@@ -61,32 +61,27 @@ function Layout({ onLogout, user }) {
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  // Smart fetch function with auto-discovery fallbacks
   const fetchTransactions = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Helper to try multiple endpoint routes to bypass 404s
       const fetchWithFallback = async (type) => {
-        const endpoints = ['/get', '/all', '/', '/get-all'];
+        const endpoints = ['/all', '/get', '/'];
         for (const ep of endpoints) {
           try {
             const res = await axios.get(`${API_BASE}/${type}${ep}`, { headers });
             return safeArrayFromResponse(res).map(item => ({ ...item, type }));
           } catch (err) {
             if (err.response?.status === 404) {
-              continue; // Try the next endpoint
+              continue; 
             }
-            console.error(`Error fetching ${type} at ${ep}:`, err);
           }
         }
-        console.warn(`Could not find a valid route for ${type}.`);
         return [];
       };
 
-      // Fetch independently to prevent Promise.all from crashing the whole app
       const incomes = await fetchWithFallback('income');
       const expenses = await fetchWithFallback('expense');
 
@@ -111,7 +106,6 @@ function Layout({ onLogout, user }) {
     }
   };
 
-  // to add transaction income or expense
   const addTransaction = async (transaction) => {
     try {
       const token = localStorage.getItem("token");
@@ -122,36 +116,26 @@ function Layout({ onLogout, user }) {
       await fetchTransactions();
       return true;
     } catch (err) {
-      console.error(
-        "Failed to add transaction",
-        err?.response || err.message || err
-      );
+      console.error("Failed to add transaction", err);
       throw err;
     }
   };
 
-  //to update any transaction
   const editTransaction = async (id, transaction) => {
     try {
       const token = localStorage.getItem("token");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const endpoint =
         transaction.type === "income" ? "income/update" : "expense/update";
-      await axios.put(`${API_BASE}/${endpoint}/${id}`, transaction, {
-        headers,
-      });
+      await axios.put(`${API_BASE}/${endpoint}/${id}`, transaction, { headers });
       await fetchTransactions();
       return true;
     } catch (err) {
-      console.error(
-        "Failed to edit transaction",
-        err?.response || err.message || err
-      );
+      console.error("Failed to edit transaction", err);
       throw err;
     }
   };
 
-  //to delete a transaction
   const deleteTransaction = async (id, type) => {
     try {
       const token = localStorage.getItem("token");
@@ -161,10 +145,7 @@ function Layout({ onLogout, user }) {
       await fetchTransactions();
       return true;
     } catch (err) {
-      console.error(
-        "Failed to delete transaction",
-        err?.response || err.message || err
-      );
+      console.error("Failed to delete transaction", err);
       throw err;
     }
   };
@@ -443,8 +424,7 @@ function Layout({ onLogout, user }) {
                   Recent Transactions
                 </h3>
                 <button onClick={fetchTransactions} disabled={loading} className={styles.transactions.refreshButton}>
-                  <RefreshCw className={styles.transactions.refreshIcon(loading)}
-                  />
+                  <RefreshCw className={styles.transactions.refreshIcon(loading)} />
                 </button>
               </div>
 
@@ -530,8 +510,7 @@ function Layout({ onLogout, user }) {
                     <div className=" flex items-center gap-3">
                       <div className={styles.categories.categoryIconContainer}>
                         {CATEGORY_ICONS[category] || (
-                          <IndianRupee className={styles.categories.categoryIcon}
-                          />
+                          <IndianRupee className={styles.categories.categoryIcon} />
                         )}
                       </div>
                       <span className={styles.categories.categoryName}>
