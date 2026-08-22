@@ -57,7 +57,7 @@ graph TD
 
 ---
 
-## Useful Information / How to Run Locally
+## How to Run Locally
 
 ### Prerequisites
 * Node.js (v18 or higher)
